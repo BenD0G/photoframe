@@ -73,6 +73,26 @@ pub async fn list_top_folder() -> serde_json::Value {
     foo
 }
 
+// Full possible output for a file is:
+// "category": Number(1),
+// "comments": Number(0),
+// "contenttype": String("image/jpeg"),
+// "created": String("Mon, 17 Apr 2023 17:22:04 +0000"),
+// "exifdatetime": Number(1681755723),
+// "fileid": Number(26016926125),
+// "hash": Number(9722675623775271780),
+// "height": Number(4000),
+// "icon": String("image"),
+// "id": String("f26016926125"),
+// "isfolder": Bool(false),
+// "ismine": Bool(true),
+// "isshared": Bool(false),
+// "modified": String("Mon, 17 Apr 2023 17:22:04 +0000"),
+// "name": String("IMG20230417182203.jpg"),
+// "parentfolderid": Number(6211910250),
+// "size": Number(2991548),
+// "thumb": Bool(true),
+// "width": Number(3008),
 pub async fn get_file_ids_in_folder(folder_id: u64) -> Vec<u64> {
     let url = EndPoint::ListFolder.get_url_with_oauth_token();
     let url = format!("{url}&folderid={folder_id}&filterfilemeta=fileid");
