@@ -1,11 +1,13 @@
 mod urls;
-use photoframe::api::get_file_ids_in_folder;
+use photoframe::api::{get_file_ids_in_folder, get_auth_token};
 
 #[tokio::main]
 async fn main() {
     let folder_id: u64 = 6211910250;
     let file_ids = get_file_ids_in_folder(folder_id).await;
     println!("{file_ids:?}");
-    let zip = photoframe::api::get_zip(&file_ids).await;
+    let token = get_auth_token().await;
+    let zip = photoframe::api::get_zip(&file_ids, &token).await;
+    
     println!("{:#?}", zip);
 }
