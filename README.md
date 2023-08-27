@@ -2,7 +2,7 @@
 For displaying a PCloud gallery on a screen.
 
 # Notes on Building
-It seems like the target we're aiming for is `armv7-unknown-linux-gnueabihf`. Cross-compilation only seems to work by using the `cross` tool and manually adding a dependency on `openssl` with a `vendored` feature. Build with
+It seems like the target we're aiming for is `armv7-unknown-linux-gnueabihf`. Cross-compilation only seems to work by using the `cross` tool and manually adding a dependency on `openssl` with a `vendored` feature (which compiles and statically links to its own `openssl`). Build with
 ```
 cross build --release --target=armv7-unknown-linux-gnueabihf
 ```
