@@ -13,16 +13,21 @@ async fn update(config: &Config) {
     let (file_ids_to_download, file_names_to_delete) =
         existing_file_index.get_new_file_ids_and_file_names_to_delete(&desired_file_index);
 
-    for file_name in file_names_to_delete {
+    for file_name in &file_names_to_delete {
         match std::fs::remove_file(&file_name) {
             Ok(_) => {}
             Err(e) => error!("Failed to delete file {}: {}", file_name, e),
         }
     }
 
-    let token = get_auth_token().await;
-    get_zip(&file_ids_to_download, &token, &config.photo_dir).await;
-    desired_file_index.write(&config.index_file);
+    if !file_ids_to_download.is_empty() {
+        let token = get_auth_token().await;
+        get_zip(&file_ids_to_download, &token, &config.photo_dir).await;
+    }
+
+    if !file_names_to_delete.is_empty() || !file_ids_to_download.is_empty() {
+        desired_file_index.write(&config.index_file);
+    }
     info!("Completed update.")
 }
 
