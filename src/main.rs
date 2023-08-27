@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use log::{error, info};
-use photoframe::api::{get_auth_token, get_file_ids_in_folder, get_zip, Config, FileIndex};
+use photoframe::{get_auth_token, get_file_ids_in_folder, get_zip, Config, FileIndex};
 use tokio::time::{interval, Duration};
 
 const FOLDER_ID: u64 = 7565553876;

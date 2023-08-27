@@ -15,7 +15,6 @@ enum EndPoint {
     GetDigest,
     GetZip,
     ListFolder,
-    Oauth2Token,
     UserInfo,
 }
 
@@ -25,7 +24,6 @@ impl EndPoint {
             EndPoint::GetDigest => "getdigest",
             EndPoint::GetZip => "getzip",
             EndPoint::ListFolder => "listfolder",
-            EndPoint::Oauth2Token => "oauth2_token",
             EndPoint::UserInfo => "userinfo",
         };
         format!("{BASE_URL}/{method_name}")
@@ -37,7 +35,6 @@ impl EndPoint {
             EndPoint::GetDigest => "getdigest",
             EndPoint::GetZip => "getzip",
             EndPoint::ListFolder => "listfolder",
-            EndPoint::Oauth2Token => "oauth2_token",
             EndPoint::UserInfo => "userinfo",
         };
         format!("{BASE_URL}/{method_name}?access_token={token}")
@@ -154,52 +151,6 @@ pub async fn get_auth_token() -> String {
     foo["auth"].as_str().unwrap().to_string()
 }
 
-pub async fn get_oauth_token() -> serde_json::Value {
-    let url = EndPoint::Oauth2Token.get_url();
-    let client_id = std::env::var("PHOTOFRAME_CLIENT_ID").unwrap();
-    let client_secret = std::env::var("PHOTOFRAME_CLIENT_SECRET").unwrap();
-    let url = format!("{url}?client_id={client_id}&client_secret={client_secret}");
-
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .unwrap();
-    let bar = client.get(url).send().await.unwrap();
-    let text = bar.text().await.unwrap();
-    let baz = serde_json::from_str::<serde_json::Value>(&text).unwrap();
-
-    baz
-}
-
-pub async fn list_top_folder() -> serde_json::Value {
-    let url = EndPoint::ListFolder.get_url_with_oauth_token();
-    let url = format!("{url}&folderid=0");
-    let response = reqwest::get(&url).await.unwrap();
-    let text = response.text().await.unwrap();
-    let foo = serde_json::from_str::<serde_json::Value>(&text).unwrap();
-    foo
-}
-
-// Full possible output for a file is:
-// "category": Number(1),
-// "comments": Number(0),
-// "contenttype": String("image/jpeg"),
-// "created": String("Mon, 17 Apr 2023 17:22:04 +0000"),
-// "exifdatetime": Number(1681755723),
-// "fileid": Number(26016926125),
-// "hash": Number(9722675623775271780),
-// "height": Number(4000),
-// "icon": String("image"),
-// "id": String("f26016926125"),
-// "isfolder": Bool(false),
-// "ismine": Bool(true),
-// "isshared": Bool(false),
-// "modified": String("Mon, 17 Apr 2023 17:22:04 +0000"),
-// "name": String("IMG20230417182203.jpg"),
-// "parentfolderid": Number(6211910250),
-// "size": Number(2991548),
-// "thumb": Bool(true),
-// "width": Number(3008),
 pub async fn get_file_ids_in_folder(folder_id: u64) -> FileIndex {
     let url = EndPoint::ListFolder.get_url_with_oauth_token();
     let url = format!("{url}&folderid={folder_id}&filterfilemeta=fileid,name");
