@@ -29,8 +29,8 @@ impl EndPoint {
         format!("{BASE_URL}/{method_name}")
     }
 
-    fn get_url_with_oauth_token(&self) -> String {
-        let token = std::env::var("PHOTOFRAME_OAUTH_TOKEN").unwrap();
+    fn get_url_with_oauth_token(&self, config: &Config) -> String {
+        let token = &config.pcloud_oath_token;
         let method_name = match self {
             EndPoint::GetDigest => "getdigest",
             EndPoint::GetZip => "getzip",
@@ -44,6 +44,29 @@ impl EndPoint {
 pub struct Config {
     pub index_file: PathBuf,
     pub photo_dir: PathBuf,
+    pub pcloud_username: String,
+    pub pcloud_password: String,
+    pub pcloud_oath_token: String,
+}
+
+impl Config {
+    /// Read from environment variables.
+    pub fn new() -> Self {
+        Config {
+            index_file: std::env::var("PHOTOFRAME_INDEX_FILE")
+                .expect("PHOTOFRAME_INDEX_FILE not set")
+                .into(),
+            photo_dir: std::env::var("PHOTOFRAME_PHOTO_DIR")
+                .expect("PHOTOFRAME_PHOTO_DIR not set")
+                .into(),
+            pcloud_username: std::env::var("PHOTOFRAME_USERNAME")
+                .expect("PHOTOFRAME_USERNAME not set"),
+            pcloud_password: std::env::var("PHOTOFRAME_PASSWORD")
+                .expect("PHOTOFRAME_PASSWORD not set"),
+            pcloud_oath_token: std::env::var("PHOTOFRAME_OAUTH_TOKEN")
+                .expect("PHOTOFRAME_OAUTH_TOKEN not set"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -134,9 +157,9 @@ fn make_password_digest(username: &str, password: &str, digest: &str) -> String 
 }
 
 /// Generate an auth token.
-pub async fn get_auth_token() -> String {
-    let username = std::env::var("PHOTOFRAME_USERNAME").unwrap();
-    let password = std::env::var("PHOTOFRAME_PASSWORD").unwrap();
+pub async fn get_auth_token(config: &Config) -> String {
+    let username = &config.pcloud_username;
+    let password = &config.pcloud_password;
     let digest = get_digest().await;
     let password_digest = make_password_digest(&username, &password, &digest);
 
@@ -151,8 +174,8 @@ pub async fn get_auth_token() -> String {
     foo["auth"].as_str().unwrap().to_string()
 }
 
-pub async fn get_file_ids_in_folder(folder_id: u64) -> FileIndex {
-    let url = EndPoint::ListFolder.get_url_with_oauth_token();
+pub async fn get_file_ids_in_folder(folder_id: u64, config: &Config) -> FileIndex {
+    let url = EndPoint::ListFolder.get_url_with_oauth_token(config);
     let url = format!("{url}&folderid={folder_id}&filterfilemeta=fileid,name");
     let response = reqwest::get(&url).await.unwrap();
     let text = response.text().await.unwrap();
