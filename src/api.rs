@@ -1,13 +1,20 @@
+use log::warn;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::{Cursor, Read},
+    path::PathBuf,
 };
 
 use sha1::{Digest, Sha1};
 
 use crate::urls::EndPoint;
+
+pub struct Config {
+    pub index_file: PathBuf,
+    pub photo_dir: PathBuf,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FileMetadata {
@@ -16,12 +23,12 @@ struct FileMetadata {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct FileIndex {
+pub struct FileIndex {
     files: Vec<FileMetadata>,
 }
 
 impl FileIndex {
-    fn get_new_file_ids_and_file_names_to_delete(
+    pub fn get_new_file_ids_and_file_names_to_delete(
         &self,
         desired_index: &FileIndex,
     ) -> (Vec<u64>, Vec<String>) {
@@ -54,6 +61,25 @@ impl FileIndex {
             })
             .collect::<Vec<String>>();
         (file_ids_to_download, file_names_to_delete)
+    }
+
+    pub fn read(path: &PathBuf) -> FileIndex {
+        match File::open(path) {
+            Ok(file) => {
+                let reader = std::io::BufReader::new(file);
+                serde_json::from_reader(reader).unwrap()
+            }
+            Err(_) => {
+                warn!("Failed to read file index at {path:?}, returning empty one.");
+                FileIndex { files: vec![] }
+            }
+        }
+    }
+
+    pub fn write(&self, path: &PathBuf) {
+        let file = File::create(path).unwrap();
+        let writer = std::io::BufWriter::new(file);
+        serde_json::to_writer(writer, self).unwrap();
     }
 }
 
@@ -100,11 +126,6 @@ pub async fn get_oauth_token() -> serde_json::Value {
     let client_id = std::env::var("PHOTOFRAME_CLIENT_ID").unwrap();
     let client_secret = std::env::var("PHOTOFRAME_CLIENT_SECRET").unwrap();
     let url = format!("{url}?client_id={client_id}&client_secret={client_secret}");
-    let response = reqwest::get(&url).await.unwrap();
-    println!("{:#?} {}", response, response.status());
-    let text = response.text().await.unwrap();
-    let foo = serde_json::from_str::<serde_json::Value>(&text).unwrap();
-    // foo
 
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -171,11 +192,6 @@ fn unzip_and_save<R: Read + std::io::Seek>(reader: R) -> zip::result::ZipResult<
         let mut file = archive.by_index(i)?;
         let outpath = file.enclosed_name().unwrap();
 
-        // if let Some(p) = outpath.parent() {
-        //     if !p.exists() {
-        //         std::fs::create_dir_all(&p)?;
-        //     }
-        // }
         let mut outfile = File::create(&outpath)?;
         std::io::copy(&mut file, &mut outfile)?;
     }
@@ -197,8 +213,6 @@ pub async fn get_zip(file_ids: &[u64], token: &str) {
     let bytes = response.bytes().await.unwrap();
     let reader = Cursor::new(bytes);
     unzip_and_save(reader).unwrap();
-    // let foo = serde_json::from_str::<serde_json::Value>(&text).unwrap();
-    // println!("{:#?}", text);
 }
 
 #[cfg(test)]
