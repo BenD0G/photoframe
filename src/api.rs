@@ -9,54 +9,50 @@ use sha1::{Digest, Sha1};
 
 use crate::urls::EndPoint;
 
-#[derive(Serialize, Deserialize)]
-struct DownloadedFile {
+#[derive(Serialize, Deserialize, Debug)]
+struct FileMetadata {
     file_id: u64,
     file_name: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct DownloadedFiles {
-    files: Vec<DownloadedFile>,
+#[derive(Serialize, Deserialize, Debug)]
+struct FileIndex {
+    files: Vec<FileMetadata>,
 }
 
-impl DownloadedFiles {
+impl FileIndex {
     fn get_new_file_ids_and_file_names_to_delete(
         &self,
-        new_file_ids: &[u64],
+        desired_index: &FileIndex,
     ) -> (Vec<u64>, Vec<String>) {
-        let all_file_ids: HashSet<u64> = HashSet::from_iter(new_file_ids.iter().cloned());
-        let old_file_ids = self
+        let current_file_ids = self
             .files
             .iter()
             .map(|x| x.file_id)
             .collect::<HashSet<u64>>();
-
-        let file_ids_to_download = all_file_ids
-            .difference(&old_file_ids)
-            .cloned()
+        let desired_file_ids = desired_index
+            .files
+            .iter()
+            .map(|x| x.file_id)
+            .collect::<HashSet<u64>>();
+        let file_ids_to_download = desired_file_ids
+            .difference(&current_file_ids)
+            .map(|x| *x)
             .collect::<Vec<u64>>();
-
-        let file_ids_to_delete = old_file_ids
-            .difference(&all_file_ids)
-            .cloned()
-            .collect::<Vec<u64>>();
-
-        let file_names_to_delete = if file_ids_to_delete.is_empty() {
-            vec![]
-        } else {
-            let file_id_to_file_name = self
-                .files
-                .iter()
-                .map(|x| (x.file_id, x.file_name.clone()))
-                .collect::<HashMap<u64, String>>();
-            file_ids_to_delete
-                .iter()
-                .map(|x| file_id_to_file_name.get(x).map(|x| x.clone()))
-                .filter_map(|x| x)
-                .collect::<Vec<String>>()
-        };
-
+        let file_id_to_file_name = self
+            .files
+            .iter()
+            .map(|x| (x.file_id, x.file_name.clone()))
+            .collect::<HashMap<u64, String>>();
+        let file_names_to_delete = current_file_ids
+            .difference(&desired_file_ids)
+            .map(|x| {
+                file_id_to_file_name
+                    .get(x)
+                    .unwrap_or_else(|| panic!("File ID {} not found in current file index", x))
+                    .clone()
+            })
+            .collect::<Vec<String>>();
         (file_ids_to_download, file_names_to_delete)
     }
 }
@@ -150,18 +146,22 @@ pub async fn list_top_folder() -> serde_json::Value {
 // "size": Number(2991548),
 // "thumb": Bool(true),
 // "width": Number(3008),
-pub async fn get_file_ids_in_folder(folder_id: u64) -> Vec<u64> {
+pub async fn get_file_ids_in_folder(folder_id: u64) -> FileIndex {
     let url = EndPoint::ListFolder.get_url_with_oauth_token();
-    let url = format!("{url}&folderid={folder_id}&filterfilemeta=fileid");
+    let url = format!("{url}&folderid={folder_id}&filterfilemeta=fileid,name");
     let response = reqwest::get(&url).await.unwrap();
     let text = response.text().await.unwrap();
-    let foo = serde_json::from_str::<serde_json::Value>(&text).unwrap();
-    foo["metadata"]["contents"]
+    let json = serde_json::from_str::<serde_json::Value>(&text).unwrap();
+    let file_metas = json["metadata"]["contents"]
         .as_array()
         .unwrap()
         .iter()
-        .map(|x| x["fileid"].as_u64().unwrap())
-        .collect()
+        .map(|x| FileMetadata {
+            file_id: x["fileid"].as_u64().unwrap(),
+            file_name: x["name"].as_str().unwrap().to_string(),
+        })
+        .collect();
+    FileIndex { files: file_metas }
 }
 
 fn unzip_and_save<R: Read + std::io::Seek>(reader: R) -> zip::result::ZipResult<()> {
@@ -207,25 +207,40 @@ mod tests {
 
     #[test]
     fn test_get_new_file_ids_and_file_names_to_delete() {
-        let downloaded_files = DownloadedFiles {
+        let downloaded_files = FileIndex {
             files: vec![
-                DownloadedFile {
+                FileMetadata {
                     file_id: 1,
                     file_name: "foo".to_string(),
                 },
-                DownloadedFile {
+                FileMetadata {
                     file_id: 2,
                     file_name: "bar".to_string(),
                 },
-                DownloadedFile {
+                FileMetadata {
                     file_id: 3,
                     file_name: "baz".to_string(),
                 },
             ],
         };
-        let new_file_ids = vec![1, 2, 4];
+        let new_index = FileIndex {
+            files: vec![
+                FileMetadata {
+                    file_id: 1,
+                    file_name: "foo".to_string(),
+                },
+                FileMetadata {
+                    file_id: 2,
+                    file_name: "bar".to_string(),
+                },
+                FileMetadata {
+                    file_id: 4,
+                    file_name: "poop".to_string(),
+                },
+            ],
+        };
         let (file_ids_to_download, file_names_to_delete) =
-            downloaded_files.get_new_file_ids_and_file_names_to_delete(&new_file_ids);
+            downloaded_files.get_new_file_ids_and_file_names_to_delete(&new_index);
         assert_eq!(file_ids_to_download, vec![4]);
         assert_eq!(file_names_to_delete, vec!["baz"]);
     }
