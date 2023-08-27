@@ -1,5 +1,3 @@
-use std::f32::consts::E;
-
 const BASE_URL: &str = "https://eapi.pcloud.com";
 
 pub enum EndPoint {

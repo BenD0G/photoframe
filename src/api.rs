@@ -1,8 +1,65 @@
-use std::{fs::File, io::{Read, Cursor}};
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::{Cursor, Read},
+};
 
 use sha1::{Digest, Sha1};
 
 use crate::urls::EndPoint;
+
+#[derive(Serialize, Deserialize)]
+struct DownloadedFile {
+    file_id: u64,
+    file_name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct DownloadedFiles {
+    files: Vec<DownloadedFile>,
+}
+
+impl DownloadedFiles {
+    fn get_new_file_ids_and_file_names_to_delete(
+        &self,
+        new_file_ids: &[u64],
+    ) -> (Vec<u64>, Vec<String>) {
+        let all_file_ids: HashSet<u64> = HashSet::from_iter(new_file_ids.iter().cloned());
+        let old_file_ids = self
+            .files
+            .iter()
+            .map(|x| x.file_id)
+            .collect::<HashSet<u64>>();
+
+        let file_ids_to_download = all_file_ids
+            .difference(&old_file_ids)
+            .cloned()
+            .collect::<Vec<u64>>();
+
+        let file_ids_to_delete = old_file_ids
+            .difference(&all_file_ids)
+            .cloned()
+            .collect::<Vec<u64>>();
+
+        let file_names_to_delete = if file_ids_to_delete.is_empty() {
+            vec![]
+        } else {
+            let file_id_to_file_name = self
+                .files
+                .iter()
+                .map(|x| (x.file_id, x.file_name.clone()))
+                .collect::<HashMap<u64, String>>();
+            file_ids_to_delete
+                .iter()
+                .map(|x| file_id_to_file_name.get(x).map(|x| x.clone()))
+                .filter_map(|x| x)
+                .collect::<Vec<String>>()
+        };
+
+        (file_ids_to_download, file_names_to_delete)
+    }
+}
 
 /// Return a digest that must be used within 30s.
 pub async fn get_digest() -> String {
@@ -142,4 +199,34 @@ pub async fn get_zip(file_ids: &[u64], token: &str) {
     unzip_and_save(reader).unwrap();
     // let foo = serde_json::from_str::<serde_json::Value>(&text).unwrap();
     // println!("{:#?}", text);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_new_file_ids_and_file_names_to_delete() {
+        let downloaded_files = DownloadedFiles {
+            files: vec![
+                DownloadedFile {
+                    file_id: 1,
+                    file_name: "foo".to_string(),
+                },
+                DownloadedFile {
+                    file_id: 2,
+                    file_name: "bar".to_string(),
+                },
+                DownloadedFile {
+                    file_id: 3,
+                    file_name: "baz".to_string(),
+                },
+            ],
+        };
+        let new_file_ids = vec![1, 2, 4];
+        let (file_ids_to_download, file_names_to_delete) =
+            downloaded_files.get_new_file_ids_and_file_names_to_delete(&new_file_ids);
+        assert_eq!(file_ids_to_download, vec![4]);
+        assert_eq!(file_names_to_delete, vec!["baz"]);
+    }
 }
