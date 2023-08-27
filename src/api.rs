@@ -112,7 +112,7 @@ impl FileIndex {
     pub fn write(&self, path: &PathBuf) {
         let file = File::create(path).unwrap();
         let writer = std::io::BufWriter::new(file);
-        serde_json::to_writer(writer, self).unwrap();
+        serde_json::to_writer_pretty(writer, self).unwrap();
     }
 }
 
