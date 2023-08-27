@@ -60,7 +60,7 @@ async fn main() {
         photo_dir: photo_dir.into(),
     };
 
-    let mut interval = interval(Duration::from_secs(30));
+    let mut interval = interval(Duration::from_secs(60 * 10));
     loop {
         interval.tick().await;
         update(&config).await;
