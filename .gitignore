@@ -20,5 +20,5 @@ Cargo.lock
 
 *.jpg
 
-/index.txt
+/index.json
 /photos/**
