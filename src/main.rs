@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use log::{error, info};
 use tokio::time::{interval, Duration};
 mod urls;
@@ -31,6 +33,9 @@ async fn main() {
 
     let index_file = std::env::var("PHOTOFRAME_INDEX_FILE").unwrap();
     let photo_dir = std::env::var("PHOTOFRAME_PHOTO_DIR").unwrap();
+
+    std::fs::create_dir_all(&photo_dir).unwrap();
+    std::fs::create_dir_all(&PathBuf::from(&index_file).parent().unwrap()).unwrap();
 
     let config = Config {
         index_file: index_file.into(),
