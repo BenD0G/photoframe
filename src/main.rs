@@ -18,7 +18,8 @@ async fn update(config: &Config) {
         l => {
             info!("Deleting {} files.", l);
             for file_name in &file_names_to_delete {
-                match std::fs::remove_file(&file_name) {
+                let path = config.photo_dir.join(file_name);
+                match std::fs::remove_file(path) {
                     Ok(_) => {}
                     Err(e) => error!("Failed to delete file {}: {}", file_name, e),
                 }
