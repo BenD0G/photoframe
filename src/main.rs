@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use log::{error, info};
-use tokio::time::{interval, Duration};
 use photoframe::api::{get_auth_token, get_file_ids_in_folder, Config, FileIndex};
+use tokio::time::{interval, Duration};
 
 const FOLDER_ID: u64 = 6211910250;
 
@@ -28,7 +28,10 @@ async fn update(config: &Config) {
 
 #[tokio::main]
 async fn main() {
-    simple_logger::SimpleLogger::new().init().unwrap();
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()
+        .unwrap();
 
     let index_file = std::env::var("PHOTOFRAME_INDEX_FILE").unwrap();
     let photo_dir = std::env::var("PHOTOFRAME_PHOTO_DIR").unwrap();
