@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use log::{error, info};
-use photoframe::api::{get_auth_token, get_file_ids_in_folder, Config, FileIndex};
+use photoframe::api::{get_auth_token, get_file_ids_in_folder, get_zip, Config, FileIndex};
 use tokio::time::{interval, Duration};
 
 const FOLDER_ID: u64 = 6211910250;
@@ -21,7 +21,7 @@ async fn update(config: &Config) {
     }
 
     let token = get_auth_token().await;
-    photoframe::api::get_zip(&file_ids_to_download, &token).await;
+    get_zip(&file_ids_to_download, &token, &config.photo_dir).await;
     desired_file_index.write(&config.index_file);
     info!("Completed update.")
 }

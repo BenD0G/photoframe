@@ -218,14 +218,16 @@ pub async fn get_file_ids_in_folder(folder_id: u64) -> FileIndex {
     FileIndex { files: file_metas }
 }
 
-fn unzip_and_save<R: Read + std::io::Seek>(reader: R) -> zip::result::ZipResult<()> {
+fn unzip_and_save<R: Read + std::io::Seek>(reader: R, dir: &PathBuf) -> zip::result::ZipResult<()> {
     let mut archive = zip::ZipArchive::new(reader)?;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let outpath = file.enclosed_name().unwrap();
+        let filename = file.enclosed_name().unwrap();
 
-        let mut outfile = File::create(&outpath)?;
+        let path = dir.join(filename);
+
+        let mut outfile = File::create(&path)?;
         std::io::copy(&mut file, &mut outfile)?;
     }
     Ok(())
@@ -234,7 +236,7 @@ fn unzip_and_save<R: Read + std::io::Seek>(reader: R) -> zip::result::ZipResult<
 /// Download the file ID's to the current directory.
 /// This requires token-based auth and can't use OAuth for some undocumented reason.
 /// An additional constraint is that we don't know which file corresponds to which file ID.
-pub async fn get_zip(file_ids: &[u64], token: &str) {
+pub async fn get_zip(file_ids: &[u64], token: &str, dir: &PathBuf) {
     let url = EndPoint::GetZip.get_url();
     let file_ids = file_ids
         .iter()
@@ -245,7 +247,7 @@ pub async fn get_zip(file_ids: &[u64], token: &str) {
     let response = reqwest::get(&url).await.unwrap();
     let bytes = response.bytes().await.unwrap();
     let reader = Cursor::new(bytes);
-    unzip_and_save(reader).unwrap();
+    unzip_and_save(reader, dir).unwrap();
 }
 
 #[cfg(test)]
