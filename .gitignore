@@ -22,3 +22,7 @@ Cargo.lock
 
 /index.json
 /photos/**
+
+**/*.ipynb
+
+hosts.ini

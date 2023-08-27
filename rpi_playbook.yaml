@@ -1,0 +1,75 @@
+---
+- name: Set Environment Variables on Raspberry Pi
+  hosts: raspberrypi
+  become: yes
+  tasks:
+    - name: Set environment variable in .bashrc
+      lineinfile:
+        path: "/home/{{ ansible_ssh_user }}/.bashrc"
+        line: "export {{ item.key }}='{{ item.value }}'"
+        regexp: "^export {{ item.key }}="
+        state: present
+      with_dict:
+        PHOTOFRAME_USERNAME: "{{ PHOTOFRAME_USERNAME }}"
+        PHOTOFRAME_PASSWORD: "{{ PHOTOFRAME_PASSWORD }}"
+        PHOTOFRAME_OAUTH_TOKEN: "{{ PHOTOFRAME_OAUTH_TOKEN }}"
+        PHOTOFRAME_INDEX_FILE: /home/pi/.photoframe/index.json
+        PHOTOFRAME_PHOTO_DIR: /home/pi/.photoframe/photos
+- name: Set up slideshow on Raspberry Pi
+  hosts: raspberrypi
+  become: yes
+  tasks:
+    - name: Copy executable to Raspberry Pi
+      copy:
+        src: "target/aarch64-unknown-linux-gnu/release/photoframe"
+        dest: "/home/pi/photoframe"
+        mode: "4755"
+
+    - name: Install feh
+      apt:
+        name: feh
+        state: present
+        update_cache: yes
+
+    - name: Create slideshow script
+      copy:
+        dest: "/home/pi/slideshow.sh"
+        content: |
+          #!/bin/bash
+          feh -Y -x -q -D 10 -B black -F -Z -z -r /home/pi/.photoframe/photos
+        mode: "0755"
+      notify: Reboot system
+
+    - name: Set up slideshow to run on startup
+      lineinfile:
+        path: "/home/pi/.config/lxsession/LXDE-pi/autostart"
+        line: "@/home/pi/slideshow.sh"
+        create: yes
+
+    - name: Add systemd service for executable
+      copy:
+        dest: "/etc/systemd/system/photoframe.service"
+        content: |
+          [Unit]
+          Description=Background executable service
+          After=network.target
+
+          [Service]
+          ExecStart=/home/pi/photoframe
+          Restart=on-failure
+          User=pi
+          Group=pi
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload and start service
+
+  handlers:
+    - name: Reboot system
+      reboot:
+    - name: Reload and start service
+      systemd:
+        name: photoframe
+        daemon_reload: yes
+        state: restarted
+        enabled: yes
