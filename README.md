@@ -1,6 +1,22 @@
 # photoframe
 For displaying a PCloud gallery on a screen.
 
+# Notes on Building
+It seems like the target we're aiming for is `armv7-unknown-linux-gnueabihf`. Cross-compilation only seems to work by using the `cross` tool and manually adding a dependency on `openssl` with a `vendored` feature. Build with
+```
+cross build --release --target=armv7-unknown-linux-gnueabihf
+```
+
+Then run the ansible script:
+```
+ansible-playbook -i hosts.ini rpi_playbook.yaml -e PHOTOFRAME_USERNAME=$PHOTOFRAME_USERNAME -e PHOTOFRAME_PASSWORD=$PHOTOFRAME_PASSWORD -e PHOTOFRAME_OAUTH_TOKEN=$PHOTOFRAME_OAUTH_TOKEN
+```
+Where `hosts.ini` looks like
+```
+[raspberrypi]
+192.168.xx.xxx ansible_ssh_user=pi ansible_ssh_pass=<pass>
+```
+
 # Auth
 The PCloud docs are _completely insane_: they are inconsistent, often blatantly incorrect, always deeply aggravating.
 

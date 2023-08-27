@@ -15,15 +15,17 @@
         PHOTOFRAME_OAUTH_TOKEN: "{{ PHOTOFRAME_OAUTH_TOKEN }}"
         PHOTOFRAME_INDEX_FILE: /home/pi/.photoframe/index.json
         PHOTOFRAME_PHOTO_DIR: /home/pi/.photoframe/photos
+
 - name: Set up slideshow on Raspberry Pi
   hosts: raspberrypi
   become: yes
   tasks:
     - name: Copy executable to Raspberry Pi
+      become: no
       copy:
-        src: "target/aarch64-unknown-linux-gnu/release/photoframe"
+        src: "target/armv7-unknown-linux-gnueabihf/release/photoframe"
         dest: "/home/pi/photoframe"
-        mode: "4755"
+        mode: "0755"
 
     - name: Install feh
       apt:
