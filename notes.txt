@@ -1,0 +1,26 @@
+Notes I made while trying to get the slideshow to display.
+
+Changes:
+- v3d replace
+- custom resolution
+- group=2
+- mode=87
+
+Still wrong resolution
+
+- force_hotplug
+
+Black screen...
+
+- disable_overscan=1
+
+Same again
+
+- revert last 2, and apt upgrade
+
+Back to displaying, but at wrong resolution
+BUT BUT BUT I noticed that if I run feh from the terminal, it does the right thing
+
+- add in a 10s sleep
+
+Still broken

@@ -3,6 +3,28 @@
   hosts: raspberrypi
   become: yes
   tasks:
+    - name: Modify boot config for screen
+      lineinfile:
+        path: /boot/config.txt
+        line: "{{ item }}"
+        insertafter: EOF
+      with_items:
+        # - "hdmi_force_hotplug=1"
+        # - "max_usb_current=1"
+        - "hdmi_group=2"
+        - "hdmi_mode=87"
+        - "hdmi_cvt 1024 600 60 6 0 0 0"
+        # - "hdmi_drive=1"
+        # - "hdmi_safe=1"
+      notify: Reboot system
+    
+    - name: Modify boot config again
+      replace:
+        path: /boot/config.txt
+        regexp: vc4-kms-v3d
+        replace: vc4-fkms-v3d
+      notify: Reboot system
+
     - name: Copy executable to Raspberry Pi
       become: no
       copy:
@@ -31,6 +53,9 @@
         dest: "/home/pi/slideshow.sh"
         content: |
           #!/bin/bash
+          export DISPLAY=:0
+          xhost +local:
+          sleep 10
           feh -Y -x -q -D 10 -B black -F -Z -z -r /home/pi/.photoframe/photos
         mode: "0755"
       notify: Reboot system
@@ -59,6 +84,24 @@
           [Install]
           WantedBy=multi-user.target
       notify: Reload and start service
+
+    # - name: Add systemd service for slideshow display
+    #   copy:
+    #     dest: "/etc/systemd/system/slideshow.service"
+    #     content: |
+    #       [Unit]
+    #       Description=Background executable service
+    #       After=network.target
+
+    #       [Service]
+    #       ExecStart=/home/pi/slideshow.sh
+    #       Restart=on-failure
+    #       User=pi
+    #       Group=pi
+
+    #       [Install]
+    #       WantedBy=multi-user.target
+    #   notify: Reload and start service
 
   handlers:
     - name: Reboot system
