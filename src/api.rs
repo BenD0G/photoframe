@@ -178,8 +178,6 @@ pub async fn get_auth_token(config: &Config) -> String {
 pub async fn get_file_ids_in_folder(folder_id: u64, config: &Config) -> FileIndex {
     let url = EndPoint::ListFolder.get_url_with_oauth_token(config);
     let url = format!("{url}&folderid={folder_id}&filterfilemeta=fileid,name");
-    log::info!("Url:\n\t{url}");
-    log::info!("Config:\n{config:?}");
     let response = reqwest::get(&url).await.unwrap();
     let text = response.text().await.unwrap();
     let json = serde_json::from_str::<serde_json::Value>(&text).unwrap();
