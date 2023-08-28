@@ -1,21 +1,4 @@
 ---
-- name: Set Environment Variables on Raspberry Pi
-  hosts: raspberrypi
-  become: yes
-  tasks:
-    - name: Set environment variable in .bashrc
-      lineinfile:
-        path: "/home/{{ ansible_ssh_user }}/.bashrc"
-        line: "export {{ item.key }}='{{ item.value }}'"
-        regexp: "^export {{ item.key }}="
-        state: present
-      with_dict:
-        PHOTOFRAME_USERNAME: "{{ PHOTOFRAME_USERNAME }}"
-        PHOTOFRAME_PASSWORD: "{{ PHOTOFRAME_PASSWORD }}"
-        PHOTOFRAME_OAUTH_TOKEN: "{{ PHOTOFRAME_OAUTH_TOKEN }}"
-        PHOTOFRAME_INDEX_FILE: /home/pi/.photoframe/index.json
-        PHOTOFRAME_PHOTO_DIR: /home/pi/.photoframe/photos
-
 - name: Set up slideshow on Raspberry Pi
   hosts: raspberrypi
   become: yes
@@ -26,6 +9,16 @@
         src: "target/armv7-unknown-linux-gnueabihf/release/photoframe"
         dest: "/home/pi/photoframe"
         mode: "0755"
+
+    - name: Create env script
+      copy:
+        dest: "/etc/photoframe.env"
+        content: |
+          PHOTOFRAME_USERNAME={{ PHOTOFRAME_USERNAME }}
+          PHOTOFRAME_PASSWORD={{ PHOTOFRAME_PASSWORD }}
+          PHOTOFRAME_OAUTH_TOKEN={{ PHOTOFRAME_OAUTH_TOKEN }}
+          PHOTOFRAME_INDEX_FILE=/home/pi/.photoframe/index.json
+          PHOTOFRAME_PHOTO_DIR=/home/pi/.photoframe/photos
 
     - name: Install feh
       apt:
@@ -58,6 +51,7 @@
 
           [Service]
           ExecStart=/home/pi/photoframe
+          EnvironmentFile=/etc/photoframe.env
           Restart=on-failure
           User=pi
           Group=pi
