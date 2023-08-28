@@ -17,7 +17,10 @@ Where `hosts.ini` looks like
 192.168.xx.xxx ansible_ssh_user=pi ansible_ssh_pass=<pass>
 ```
 
-# Auth
+# Cross-Compiling
+Turns out, cross-compiling while linking to external libraries is a _nightmare_. As of this commit, I have something that works, and the only real downside is that I have to manually include an `openssl` crate in my dependencies. [This well-written blog post](https://capnfabs.net/posts/cross-compiling-rust-apps-raspberry-pi/) has some more tips and tricks that I'd like to try.
+
+# PCloud OAuth Token
 The PCloud docs are _completely insane_: they are inconsistent, often blatantly incorrect, always deeply aggravating.
 
 What I've ended up with is this:
